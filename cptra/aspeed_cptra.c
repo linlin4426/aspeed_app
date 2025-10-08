@@ -2397,6 +2397,10 @@ static int stress_cptra(int fd)
 			    strcmp(cptra_tests[j].name, "invoke_dpe_command") == 0)
 				continue; // Skip tests that may alter state
 
+			// Skip get_cert_chain tests since not all chips are provisioned.
+			if (strcmp(cptra_tests[j].name, "get_cert_chain") == 0)
+				continue;
+
 			 // Skip stash measurements tests after one time
 			if (i >= 1 && (strcmp(cptra_tests[j].name, "stash_measurement") == 0))
 				continue;
