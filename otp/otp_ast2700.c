@@ -1628,6 +1628,12 @@ int main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	if (strcmp(argv[1], "0") && strcmp(argv[1], "1")) {
+		printf("Invalid otp device %s, only support 0 and 1\n", argv[1]);
+		ret = OTP_USAGE;
+		goto end;
+	}
+
 	/* Drop the otp command */
 	argc--;
 	argv++;
