@@ -36,7 +36,8 @@ uint32_t chip_version(void)
 		return OTP_AST2700_A1;
 
 	} else if ((revid0 == ID0_AST2700A2 || revid1 == ID1_AST2700A2) ||
-		   (revid0 == ID0_AST2750A2 || revid1 == ID1_AST2750A2)) {
+		   (revid0 == ID0_AST2750A2 || revid1 == ID1_AST2750A2) ||
+		   (revid0 == ID0_AST2720A2 || revid1 == ID1_AST2720A2)) {
 		/* AST2700-A2 */
 		return OTP_AST2700_A1;
 	}
