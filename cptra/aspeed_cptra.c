@@ -2264,9 +2264,12 @@ static int cptra_test_caliptra_fw_load(void)
 {
 	uint8_t *p8_bmcu_in = (uint8_t *)IPC_CHANNEL_1_BOOTMCU_IN_ADDR;
 	enum cptra_ipc_cmd ipccmd = CPTRA_IPCCMD_CALIPTRA_FW_LOAD;
+	size_t len = CPTRA_FW_SIZE;
 	uint32_t data[2] = {0};
-	void *msg_src, *msg_dst;
-	int ret;
+	off_t offset = 0x0;
+	void *msg_dst;
+	int ret, fd;
+	ssize_t r;
 
 	printf("%s: Start...\n", __func__);
 
@@ -2274,22 +2277,31 @@ static int cptra_test_caliptra_fw_load(void)
 	data[0] = (uintptr_t)p8_bmcu_in;
 	data[1] = CPTRA_FW_SIZE;
 
-	msg_src = map_phys(CPTRA_FW_ADDR, CPTRA_FW_SIZE);
-	if (!msg_src) {
-		printf("map_phys failed\n");
+	fd = open("/dev/mtd0", O_RDONLY);
+	if (fd < 0) {
+		printf("fail to open mtd0 device.\n");
 		return -1;
 	}
 
 	msg_dst = (void *)shared_mem_in;
+	r = pread(fd, msg_dst, len, offset);
+	if (r < 0) {
+		printf("fail to read data from mtd0.\n");
+		ret = -1;
+		goto end;
+	}
 
-	dbg_printf("memcpy to addr %lx\n", (uintptr_t)msg_dst);
-	memcpy(msg_dst, (void *)msg_src, CPTRA_FW_SIZE);
+	if ((size_t)r != len) {
+		printf("Short read: got %zd bytes\n", r);
+		ret = -1;
+		goto end;
+	}
 
 	ret = cptra_ipc_trigger(ipccmd, data, sizeof(data));
 	if (ret) {
 		dbg_printf("cptra_ipc_trigger:0x%x is failure, ret:0x%x\n", ipccmd,
 		       ret);
-		goto cleanup;
+		goto end;
 	} else {
 		dbg_printf("cptra_ipc_trigger:0x%x is successful\n", ipccmd);
 	}
@@ -2298,22 +2310,16 @@ static int cptra_test_caliptra_fw_load(void)
 	if (ret) {
 		dbg_printf("cptra_ipc_receive:0x%x is failure, ret:0x%x\n", ipccmd,
 		       ret);
-		goto cleanup;
+		goto end;
 	} else {
 		dbg_printf("cptra_ipc_receive:0x%x is successful\n", ipccmd);
 	}
 
-cleanup:
-	munmap(msg_src, CPTRA_FW_SIZE);
-
-	if (ret)
-		goto end;
-
-	printf("%s: Pass\n", __func__);
-	return 0;
-
 end:
-	printf("%s: Failed\n", __func__);
+	if (fd >= 0)
+		close(fd);
+
+	printf("%s: %s\n", __func__, ret ? "Failed" : "Pass");
 	return ret;
 }
 
@@ -2473,7 +2479,7 @@ int main(int argc, char *argv[])
 {
 	const char *device = argv[1];
 	const char *cmd = NULL;
-	char filename[256];
+	char filename[262];
 	int fd, ret;
 
 	if (argc != 2 && argc != 3) {
